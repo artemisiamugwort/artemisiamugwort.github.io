@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>四度赤水前各方兵力分布</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://js.arcgis.com/4.32/esri/themes/light/main.css">
+</head>
+<body>
+  <header class="header">
+    <h1>四度赤水前各方兵力分布</h1>
+    <div id="searchWidget"></div>
+  </header>
+
+  <div id="viewDiv"></div>
+
+  <!-- 底图库 -->
+  <div class="basemap-gallery">
+    <div class="basemap-item" data-basemap="streets">天地图</div>
+    <div class="basemap-item" data-basemap="satellite">卫星图</div>
+    <div class="basemap-item" data-basemap="topo">地形图</div>
+    <div class="basemap-item" data-basemap="gray">灰色画布</div>
+  </div>
+
+  <script src="https://js.arcgis.com/4.32/"></script>
+  <script>
+    require([
+      "esri/Map",
+      "esri/views/MapView",
+      "esri/layers/FeatureLayer",
+      "esri/widgets/Legend",
+      "esri/widgets/ScaleBar",
+      "esri/widgets/Search",
+      "esri/widgets/LayerList",
+      "esri/geometry/Extent"
+    ], (Map, MapView, FeatureLayer, Legend, ScaleBar, Search, LayerList, Extent) => {
+
+      // 服务地址配置
+      const SERVICE_URL = "https://www.geosceneonline.cn/server/rest/services/Hosted/787/FeatureServer";
+      
+      // 初始化多类型要素图层
+      const medicalLayers = [
+        new FeatureLayer({
+          url: `${SERVICE_URL}/0`,  // 点图层
+          title: "我核心纵队",
+          visible: true,
+          popupTemplate: {
+            title: "省份：{province}",
+            content: [{
+              type: "fields",
+              fieldInfos: [
+                { fieldName: "medical_team", label: "医疗队名称" },
+                { fieldName: "personnel_num", label: "医护人员数" },
+                { fieldName: "departure_date", label: "出发日期" }
+              ]
+            }]
+          },
+          
+          renderer: {
+            type: "simple",
+            symbol: {
+              type: "simple-marker",
+              color: "#FF0000",
+              size: 10,
+              outline: {
+                color: "#FFFFFF",
+                width: 1
+              }
+            }
+          }
+        }),
+        new FeatureLayer({
+  url: `${SERVICE_URL}/1`,
+  title: "河流",
+  visible: true,
+  opacity: 0.7,
+  renderer: {
+    type: "simple",
+    symbol: {
+      type: "simple-line",
+      color: "#00AAFF",  // 保持蓝色
+      width: 2,         // 线宽保持不变
+      style: "solid"    // 将虚线改为实线
+    }
+  }
+}),
+new FeatureLayer({
+          url: `${SERVICE_URL}/2`,  // 面图层（假设为服务区域）
+          title: "兵力控制区",
+          visible: true,
+          renderer: {
+            type: "simple",
+            symbol: {
+              type: "simple-fill",
+              color: [50, 150, 50, 0.3],
+              outline: {
+                color: "#003300",
+                width: 1
+              }
+            }
+          }
+        })
+      ];
+
+      // 初始化地图
+      const map = new Map({
+        basemap: "streets",
+        layers: medicalLayers
+      });
+
+      // 创建视图（调整到武汉坐标）
+      const view = new MapView({
+        container: "viewDiv",
+        map: map,
+        center: [106, 127] ,
+        zoom: 9,
+      });
+
+      // 设置初始视图范围（根据数据范围调整）
+      view.extent = new Extent({
+        xmin: 106,
+        ymin: 26,
+        xmax: 118,
+        ymax: 34,
+        spatialReference: { wkid: 4326 }
+      });
+
+      // 比例尺配置
+      const scaleBar = new ScaleBar({
+        view: view,
+        unit: "metric"
+      });
+      view.ui.add(scaleBar, "bottom-left");
+
+      // 增强版图例配置
+      const legend = new Legend({
+        view: view,
+        layerInfos: medicalLayers.map(layer => ({
+          layer: layer,
+          title: layer.title
+        }))
+      });
+      view.ui.add(legend, "bottom-right");
+
+      // 中文搜索配置
+      const search = new Search({
+        view: view,
+        sources: [{
+          layer: medicalLayers[0],  // 使用点图层作为搜索源
+          searchFields: ["province", "medical_team"],
+          displayField: "medical_team",
+          exactMatch: false,
+          outFields: ["*"],
+          placeholder: "输入省份或医疗队名称",
+
+        }]
+      });
+      view.ui.add(search, "top-right");
+
+      // 增强图层列表（添加透明度控制）
+      const layerList = new LayerList({
+        view: view,
+        listItemCreatedFunction: (event) => {
+          const item = event.item;
+          if (item.layer.type === "base") item.visible = false;
+          
+          item.panel = {
+            content: [{
+              type: "slider",
+              label: "透明度",
+              value: item.layer.opacity || 1,
+              min: 0,
+              max: 1,
+              steps: 10,
+              action: (value) => item.layer.opacity = value
+            }]
+          };
+        }
+      });
+      view.ui.add(layerList, "top-right");
+
+      // 底图切换事件（保持原有）
+      document.querySelectorAll(".basemap-item").forEach(item => {
+        item.addEventListener("click", () => {
+          map.basemap = item.dataset.basemap;
+        });
+      });
+
+      // 调试图层加载状态
+      medicalLayers.forEach(layer => {
+        layer.watch("loadStatus", status => {
+          if (status === "loaded") {
+            console.log(`${layer.title} 加载成功`);
+          } else if (status === "failed") {
+            console.error(`${layer.title} 加载失败`);
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>
