@@ -1,0 +1,49 @@
+body {
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .header {
+    height: 60px;
+    background: #004a77;
+    color: white;
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  
+  #viewDiv {
+    flex: 1;
+    height: calc(100vh - 160px);
+  }
+  
+  .basemap-gallery {
+    height: 100px;
+    background: #f5f5f5;
+    display: flex;
+    overflow-x: auto;
+    padding: 10px;
+    gap: 15px;
+  }
+  
+  .basemap-item {
+    min-width: 120px;
+    height: 80px;
+    background: white;
+    border: 2px solid #ccc;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+  
+  .basemap-item:hover {
+    border-color: #004a77;
+    transform: scale(1.05);
+  }
